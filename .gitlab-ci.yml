@@ -1,24 +1,37 @@
 stages:
-  - lint
+  - compile
   - test
   - build
-  - deploy
 
 variables:
   DOCKER_DRIVER: overlay2
   DOCKER_TLS_CERTDIR: ""
 
-lint_job:
-  stage: lint
+# Regras para as ramificações
+workflow:
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "staging" || $CI_COMMIT_BRANCH == "development"
+      when: always
+
+compile_job:
+  stage: compile
   image: python:3.9-slim-buster
   script:
     - pip install -r requirements.txt
-    - black . --check
-    - flake8 .
+    - python -m compileall .
   rules:
-    - if: $CI_COMMIT_BRANCH == "main"
+    - if: $CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "staging" || $CI_COMMIT_BRANCH == "development"
 
-test_job:
+test_unit_job:
+  stage: test
+  image: python:3.9-slim-buster
+  script:
+    - pip install -r requirements.txt
+    - pytest tests/unit/ --cov=./ --cov-report=xml
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "staging" || $CI_COMMIT_BRANCH == "development"
+
+test_integration_job:
   stage: test
   image: python:3.9-slim-buster
   services:
@@ -29,9 +42,24 @@ test_job:
     POSTGRES_PASSWORD: postgres
   script:
     - pip install -r requirements.txt
-    - pytest --cov=./ --cov-report=xml
+    - pytest tests/integration/ --cov=./ --cov-report=xml
   rules:
-    - if: $CI_COMMIT_BRANCH == "main"
+    - if: $CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "staging" || $CI_COMMIT_BRANCH == "development"
+
+test_functional_job:
+  stage: test
+  image: python:3.9-slim-buster
+  services:
+    - postgres:13
+  variables:
+    POSTGRES_DB: taskmanager_test
+    POSTGRES_USER: postgres
+    POSTGRES_PASSWORD: postgres
+  script:
+    - pip install -r requirements.txt
+    - pytest tests/functional/ --cov=./ --cov-report=xml
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "staging" || $CI_COMMIT_BRANCH == "development"
 
 build_job:
   stage: build
@@ -42,17 +70,4 @@ build_job:
     - docker build -t taskmanager:$CI_COMMIT_SHA .
     - docker tag taskmanager:$CI_COMMIT_SHA taskmanager:latest
   rules:
-    - if: $CI_COMMIT_BRANCH == "main"
-
-deploy_job:
-  stage: deploy
-  image: docker:latest
-  services:
-    - docker:dind
-  script:
-    - echo "Deploy to production server"
-    # Adicione aqui os comandos específicos para seu ambiente de produção
-  rules:
-    - if: $CI_COMMIT_BRANCH == "main"
-  needs:
-    - build_job
+    - if: $CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "staging" || $CI_COMMIT_BRANCH == "development"
