@@ -26,4 +26,4 @@ COPY . .
 EXPOSE 5000
 
 # Comando para executar a aplicação
-CMD ["python", "run.py"] 
+CMD ["python", "todo_project/run.py"] 

@@ -1,0 +1,20 @@
+services:
+  web:
+    build: .
+    ports:
+      - "5001:5000"
+    volumes:
+      - .:/app
+      - sqlite_data:/app/todo_project/todo_project
+    environment:
+      - FLASK_APP=todo_project/run.py
+      - FLASK_ENV=development
+    networks:
+      - app-network
+
+volumes:
+  sqlite_data:
+
+networks:
+  app-network:
+    driver: bridge 

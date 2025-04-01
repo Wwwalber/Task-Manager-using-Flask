@@ -1,6 +1,138 @@
-# Task-Manager-using-Flask
+# Task Manager - Flask Application
 
-A simple web application to store your To-Do Tasks .
+Um sistema de gerenciamento de tarefas pessoais desenvolvido com Flask, PostgreSQL e Docker.
+
+## Requisitos
+
+- Docker
+- Docker Compose
+- Git
+
+## Configuração do Ambiente
+
+1. Clone o repositório:
+```bash
+git clone <repository-url>
+cd Task-Manager-using-Flask
+```
+
+2. Crie um arquivo .env baseado no .env.example:
+```bash
+cp .env.example .env
+```
+
+3. Configure as variáveis de ambiente no arquivo .env:
+```
+FLASK_APP=run.py
+FLASK_ENV=development
+SECRET_KEY=your-secret-key-here
+DATABASE_URL=postgresql://postgres:postgres@db:5432/taskmanager
+```
+
+4. Inicie os containers:
+```bash
+docker-compose up --build
+```
+
+A aplicação estará disponível em http://localhost:5000
+
+## Estrutura do Projeto
+
+```
+Task-Manager-using-Flask/
+├── todo_project/           # Aplicação Flask
+│   ├── static/            # Arquivos estáticos
+│   ├── templates/         # Templates HTML
+│   ├── __init__.py       # Inicialização da aplicação
+│   ├── models.py         # Modelos do banco de dados
+│   ├── routes.py         # Rotas da aplicação
+│   └── forms.py          # Formulários
+├── tests/                # Testes
+├── .env                  # Variáveis de ambiente
+├── .gitlab-ci.yml        # Configuração CI/CD
+├── docker-compose.yml    # Configuração Docker Compose
+├── Dockerfile           # Configuração Docker
+└── requirements.txt     # Dependências Python
+```
+
+## Funcionalidades
+
+- Autenticação de usuários
+- Criação, edição e exclusão de tarefas
+- Visualização de todas as tarefas
+- Gerenciamento de conta do usuário
+- Interface responsiva
+
+## Desenvolvimento
+
+Para desenvolvimento local:
+
+1. Crie um ambiente virtual:
+```bash
+python -m venv venv
+source venv/bin/activate  # Linux/Mac
+venv\Scripts\activate     # Windows
+```
+
+2. Instale as dependências:
+```bash
+pip install -r requirements.txt
+```
+
+3. Configure o banco de dados:
+```bash
+flask db init
+flask db migrate
+flask db upgrade
+```
+
+4. Execute a aplicação:
+```bash
+flask run
+```
+
+## Testes
+
+Para executar os testes:
+
+```bash
+pytest
+```
+
+Para cobertura de código:
+
+```bash
+pytest --cov=./ --cov-report=html
+```
+
+## CI/CD
+
+O projeto utiliza GitLab CI/CD com as seguintes etapas:
+
+1. Lint: Verifica a formatação do código
+2. Test: Executa os testes
+3. Build: Constrói a imagem Docker
+4. Deploy: Implanta a aplicação
+
+## Segurança
+
+- Autenticação obrigatória
+- Senhas criptografadas
+- Proteção contra CSRF
+- Logging de atividades
+- Validação de entrada de dados
+
+## Contribuição
+
+1. Fork o projeto
+2. Crie uma branch para sua feature
+3. Commit suas mudanças
+4. Push para a branch
+5. Abra um Pull Request
+
+## Licença
+
+Este projeto está licenciado sob a licença MIT - veja o arquivo LICENSE para detalhes.
 
 # Features
 
