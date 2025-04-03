@@ -1,6 +1,6 @@
 # Task Manager - Flask Application
 
-Um sistema de gerenciamento de tarefas pessoais desenvolvido com Flask, PostgreSQL e Docker.
+Um sistema de gerenciamento de tarefas pessoais desenvolvido com Flask, Sqlite e Docker.
 
 ## Requisitos
 
@@ -12,29 +12,35 @@ Um sistema de gerenciamento de tarefas pessoais desenvolvido com Flask, PostgreS
 
 1. Clone o repositório:
 ```bash
-git clone <repository-url>
+git clone <https://github.com/AdityaBagad/Task-Manager-using-Flask>
 cd Task-Manager-using-Flask
 ```
 
-2. Crie um arquivo .env baseado no .env.example:
+2. Configuração das Variáveis de Ambiente:
+   - Copie o arquivo de exemplo para criar seu arquivo de configuração:
+   ```bash
+   cp .env.example .env
+   ```
+   
+   - O arquivo `.env` contém configurações importantes:
+     - **FLASK_APP**: Define o ponto de entrada da aplicação
+     - **FLASK_ENV**: Define o ambiente (development/production)
+     - **FLASK_DEBUG**: Ativa/desativa o modo debug
+     - **SECRET_KEY**: Chave para segurança da aplicação
+     - **DATABASE_TYPE**: Tipo do banco de dados (sqlite)
+     - **DATABASE_PATH**: Caminho do arquivo do banco de dados
+
+   - Para gerar uma SECRET_KEY segura, use:
+   ```bash
+   python -c "import secrets; print(secrets.token_hex(32))"
+   ```
+
+3. Inicie os containers:
 ```bash
-cp .env.example .env
+docker compose up --build
 ```
 
-3. Configure as variáveis de ambiente no arquivo .env:
-```
-FLASK_APP=run.py
-FLASK_ENV=development
-SECRET_KEY=your-secret-key-here
-DATABASE_URL=postgresql://postgres:postgres@db:5432/taskmanager
-```
-
-4. Inicie os containers:
-```bash
-docker-compose up --build
-```
-
-A aplicação estará disponível em http://localhost:5000
+A aplicação estará disponível em http://localhost:5001
 
 ## Estrutura do Projeto
 

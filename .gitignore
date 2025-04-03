@@ -195,3 +195,4 @@ dmypy.json
 .pyre/
 todo_project/todo_project/site.db
 *:Zone.Identifier
+usuarios.txt
