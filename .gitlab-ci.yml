@@ -1,4 +1,6 @@
 stages:
+  - format
+  - lint
   - compile
   - test
   - build
@@ -6,32 +8,95 @@ stages:
 variables:
   DOCKER_DRIVER: overlay2
   DOCKER_TLS_CERTDIR: ""
+  PIP_CACHE_DIR: "$CI_PROJECT_DIR/.pip-cache"
+
+# Cache para dependências Python
+cache:
+  paths:
+    - .pip-cache/
+    - venv/
 
 # Regras para as ramificações
 workflow:
   rules:
-    - if: $CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "staging" || $CI_COMMIT_BRANCH == "development"
+    - if: $CI_COMMIT_TAG
       when: always
+    - if: $CI_COMMIT_BRANCH == "master"
+      when: always
+    - if: $CI_COMMIT_BRANCH == "staging"
+      when: always
+    - if: $CI_COMMIT_BRANCH == "development"
+      when: always
+    - when: never
 
+# Job de Formatação Automática
+format_code:
+  stage: format
+  image: python:3.9-slim-buster
+  script:
+    - pip install black isort
+    - black .
+    - isort .
+  rules:
+    - if: $CI_COMMIT_BRANCH == "master" || $CI_COMMIT_BRANCH == "staging" || $CI_COMMIT_BRANCH == "development"
+
+# Jobs de Linting e Análise de Código
+lint_python:
+  stage: lint
+  image: python:3.9-slim-buster
+  script:
+    - pip install flake8 black isort
+    - flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics --output-file=flake8-report.txt
+    - black . --check --diff > black-report.txt || true
+    - isort . --check-only --diff > isort-report.txt || true
+  artifacts:
+    reports:
+      codequality: flake8-report.txt
+    paths:
+      - flake8-report.txt
+      - black-report.txt
+      - isort-report.txt
+    expire_in: 1 week
+  rules:
+    - if: $CI_COMMIT_BRANCH == "master" || $CI_COMMIT_BRANCH == "staging" || $CI_COMMIT_BRANCH == "development"
+
+# Jobs de Compilação
 compile_job:
   stage: compile
   image: python:3.9-slim-buster
   script:
+    - python -m venv venv
+    - source venv/bin/activate
     - pip install -r requirements.txt
     - python -m compileall .
+  artifacts:
+    paths:
+      - venv/
+    expire_in: 1 day
   rules:
-    - if: $CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "staging" || $CI_COMMIT_BRANCH == "development"
+    - if: $CI_COMMIT_BRANCH == "master" || $CI_COMMIT_BRANCH == "staging" || $CI_COMMIT_BRANCH == "development"
 
-test_unit_job:
+# Jobs de Teste
+test_unit:
   stage: test
   image: python:3.9-slim-buster
   script:
-    - pip install -r requirements.txt
-    - pytest tests/unit/ --cov=./ --cov-report=xml
+    - source venv/bin/activate
+    - pip install pytest pytest-cov
+    - pytest tests/unit/ --cov=./ --cov-report=xml --cov-report=html
+  artifacts:
+    reports:
+      coverage_report:
+        coverage_format: cobertura
+        path: coverage.xml
+    paths:
+      - coverage.xml
+      - htmlcov/
+    expire_in: 1 week
   rules:
-    - if: $CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "staging" || $CI_COMMIT_BRANCH == "development"
+    - if: $CI_COMMIT_BRANCH == "master" || $CI_COMMIT_BRANCH == "staging" || $CI_COMMIT_BRANCH == "development"
 
-test_integration_job:
+test_integration:
   stage: test
   image: python:3.9-slim-buster
   services:
@@ -41,12 +106,22 @@ test_integration_job:
     POSTGRES_USER: postgres
     POSTGRES_PASSWORD: postgres
   script:
-    - pip install -r requirements.txt
-    - pytest tests/integration/ --cov=./ --cov-report=xml
+    - source venv/bin/activate
+    - pip install pytest pytest-cov
+    - pytest tests/integration/ --cov=./ --cov-report=xml --cov-report=html
+  artifacts:
+    reports:
+      coverage_report:
+        coverage_format: cobertura
+        path: coverage.xml
+    paths:
+      - coverage.xml
+      - htmlcov/
+    expire_in: 1 week
   rules:
-    - if: $CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "staging" || $CI_COMMIT_BRANCH == "development"
+    - if: $CI_COMMIT_BRANCH == "master" || $CI_COMMIT_BRANCH == "staging" || $CI_COMMIT_BRANCH == "development"
 
-test_functional_job:
+test_functional:
   stage: test
   image: python:3.9-slim-buster
   services:
@@ -56,12 +131,23 @@ test_functional_job:
     POSTGRES_USER: postgres
     POSTGRES_PASSWORD: postgres
   script:
-    - pip install -r requirements.txt
-    - pytest tests/functional/ --cov=./ --cov-report=xml
+    - source venv/bin/activate
+    - pip install pytest pytest-cov
+    - pytest tests/functional/ --cov=./ --cov-report=xml --cov-report=html
+  artifacts:
+    reports:
+      coverage_report:
+        coverage_format: cobertura
+        path: coverage.xml
+    paths:
+      - coverage.xml
+      - htmlcov/
+    expire_in: 1 week
   rules:
-    - if: $CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "staging" || $CI_COMMIT_BRANCH == "development"
+    - if: $CI_COMMIT_BRANCH == "master" || $CI_COMMIT_BRANCH == "staging" || $CI_COMMIT_BRANCH == "development"
 
-build_job:
+# Job de Build
+build:
   stage: build
   image: docker:latest
   services:
@@ -70,4 +156,4 @@ build_job:
     - docker build -t taskmanager:$CI_COMMIT_SHA .
     - docker tag taskmanager:$CI_COMMIT_SHA taskmanager:latest
   rules:
-    - if: $CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "staging" || $CI_COMMIT_BRANCH == "development"
+    - if: $CI_COMMIT_BRANCH == "master" || $CI_COMMIT_BRANCH == "staging" || $CI_COMMIT_BRANCH == "development"
