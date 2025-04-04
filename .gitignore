@@ -175,6 +175,7 @@ venv/
 ENV/
 env.bak/
 venv.bak/
+.venv-hackers
 
 # Spyder project settings
 .spyderproject
