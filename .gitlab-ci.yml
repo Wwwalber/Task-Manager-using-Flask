@@ -41,8 +41,8 @@ lint_python:
   image: python:3.9-slim-buster
   script:
     - pip install flake8 black isort
-    - find . -type f -name "*.py" | sort  # Lista todos os arquivos Python
-    - flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics --verbose --output-file=flake8-report.txt
+    - find . -type f -name "*.py" | sort
+    - flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics --verbose --exclude=venv --output-file=flake8-report.txt
     - black . --check --diff > black-report.txt || true
     - isort . --check-only --diff > isort-report.txt || true
   artifacts:
