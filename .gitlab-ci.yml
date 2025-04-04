@@ -26,6 +26,7 @@ workflow:
 
 # Job de Formatação Automática
 format_code:
+  needs: []  # Executa primeiro
   stage: format
   image: python:3.9-slim-buster
   script:
@@ -37,6 +38,7 @@ format_code:
 
 # Jobs de Linting e Análise de Código
 lint_python:
+  needs: ["format"]  # Executa após formatação
   stage: lint
   image: python:3.9-slim-buster
   script:
@@ -49,6 +51,7 @@ lint_python:
     - black . --check --diff > black-report.txt || echo "Black format errors found"
     - isort . --check-only --diff > isort-report.txt || echo "Isort format errors found"
   artifacts:
+    when: always  # Sempre gera artefatos, mesmo quando falha
     reports:
       codequality: flake8-report.txt
     paths:
@@ -62,6 +65,7 @@ lint_python:
 
 # Jobs de Compilação
 compile_job:
+  needs: ["lint"]  # Executa após linting
   stage: compile
   image: python:3.9-slim-buster
   script:
