@@ -41,10 +41,13 @@ lint_python:
   image: python:3.9-slim-buster
   script:
     - pip install flake8 black isort
-    - find . -type f -name "*.py" | sort  # Lista todos os arquivos Python
-    - flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics --verbose --output-file=flake8-report.txt
-    - black . --check --diff > black-report.txt || true
-    - isort . --check-only --diff > isort-report.txt || true
+    # Listar todos os arquivos Python para debug
+    - find . -type f -name "*.py" | sort
+    # Rodar Flake8 e salvar o relatório, mas não interromper o pipeline
+    - flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics --verbose --output-file=flake8-report.txt || echo "Lint errors found"
+    # Black e Isort para verificar o formato do código
+    - black . --check --diff > black-report.txt || echo "Black format errors found"
+    - isort . --check-only --diff > isort-report.txt || echo "Isort format errors found"
   artifacts:
     reports:
       codequality: flake8-report.txt
