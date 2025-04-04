@@ -1,0 +1,8 @@
+@startuml
+left to right direction
+actor Usuário
+rectangle "Sistema" {
+    usecase "Login do Usuário"
+}
+Usuário -- (Login do Usuário)
+@enduml
