@@ -196,3 +196,7 @@ dmypy.json
 todo_project/todo_project/site.db
 *:Zone.Identifier
 usuarios.txt
+
+# GitLab Runner
+gitlab-runner/config/
+**/config.toml
