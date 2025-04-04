@@ -12,3 +12,4 @@ pytest==7.4.3  #Framework para testes automatizados
 pytest-cov==4.1.0
 black==23.11.0
 flake8==6.1.0 # Ferramenta de análise estática de código
+isort==5.12.0
