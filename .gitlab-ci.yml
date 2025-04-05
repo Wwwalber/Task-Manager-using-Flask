@@ -167,3 +167,15 @@ bandit-scan:
   artifacts:
     paths:
       - bandit-report.html
+
+# job dependecy-check-scan
+dependency-check-scan:
+  stage: security
+  image: owasp/dependency-check
+  script:
+    - dependency-check.sh --project "TaskManager" --scan . --outdir reports --format "HTML"
+  artifacts:
+    paths:
+      - reports/
+  rules:
+    - if: $CI_COMMIT_BRANCH == "master" || $CI_COMMIT_BRANCH == "staging" || $CI_COMMIT_BRANCH == "development"
