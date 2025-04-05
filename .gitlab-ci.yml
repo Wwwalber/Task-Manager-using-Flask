@@ -1,6 +1,7 @@
 stages:
   - format
   - lint
+  - security
   - compile
   - test
   - build
@@ -155,3 +156,14 @@ build:
     - docker tag taskmanager:$CI_COMMIT_SHA taskmanager:latest
   rules:
     - if: $CI_COMMIT_BRANCH == "master" || $CI_COMMIT_BRANCH == "staging" || $CI_COMMIT_BRANCH == "development"
+
+bandit-scan:
+  stage: security
+  image: python:3.10
+  before_script:
+    - pip install bandit
+  script:
+    - bandit -r app/ -ll -f html -o bandit-report.html
+  artifacts:
+    paths:
+      - bandit-report.html
