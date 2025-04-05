@@ -157,6 +157,7 @@ build:
   rules:
     - if: $CI_COMMIT_BRANCH == "master" || $CI_COMMIT_BRANCH == "staging" || $CI_COMMIT_BRANCH == "development"
 
+# job de scan de vulnerabilidades
 bandit-scan:
   stage: security
   image: python:3.10
@@ -173,9 +174,9 @@ dependency-check-scan:
   stage: security
   image: owasp/dependency-check
   script:
-    - dependency-check.sh --project "TaskManager" --scan . --outdir reports --format "HTML"
+    - dependency-check.sh --project "TaskManager" --scan . --outdir output --format "HTML"
   artifacts:
     paths:
-      - reports/
+      - output/
   rules:
     - if: $CI_COMMIT_BRANCH == "master" || $CI_COMMIT_BRANCH == "staging" || $CI_COMMIT_BRANCH == "development"
