@@ -174,9 +174,9 @@ dependency-check-scan:
   stage: security
   image: owasp/dependency-check
   script:
-    - dependency-check.sh --project "TaskManager" --scan . --outdir output --format "HTML"
+    - dependency-check.sh --project "TaskManager" --scan . --outdir reports --format "HTML"
   artifacts:
     paths:
-      - output/
+      - reports/
   rules:
     - if: $CI_COMMIT_BRANCH == "master" || $CI_COMMIT_BRANCH == "staging" || $CI_COMMIT_BRANCH == "development"
