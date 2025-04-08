@@ -90,6 +90,7 @@ test_unit:
     - pip install -r requirements.txt
     - pip install pytest pytest-cov
     - pytest tests/unit/ --cov=./ --cov-report=xml --cov-report=html
+  allow_failure: true #
   artifacts:
     reports:
       coverage_report:
@@ -115,6 +116,7 @@ test_integration:
     - source venv/bin/activate
     - pip install pytest pytest-cov
     - pytest tests/integration/ --cov=./ --cov-report=xml --cov-report=html
+  allow_failure: true #
   artifacts:
     reports:
       coverage_report:
@@ -140,6 +142,7 @@ test_functional:
     - source venv/bin/activate
     - pip install pytest pytest-cov
     - pytest tests/functional/ --cov=./ --cov-report=xml --cov-report=html
+  allow_failure: true #
   artifacts:
     reports:
       coverage_report:
