@@ -5,11 +5,18 @@ stages:
   - compile
   - test
   - build
+  - review
+  - staging
+  - dast
 
 variables:
   DOCKER_DRIVER: overlay2
   DOCKER_TLS_CERTDIR: ""
   PIP_CACHE_DIR: "$CI_PROJECT_DIR/.pip-cache"
+  # Variáveis para os ambientes temporários
+  REVIEW_APP_PORT: 5001
+  STAGING_APP_PORT: 5002
+  APP_HOST: "localhost"
 
 # Cache para dependências Python
 cache:
@@ -145,18 +152,6 @@ test_functional:
   rules:
     - if: $CI_COMMIT_BRANCH == "master" || $CI_COMMIT_BRANCH == "staging" || $CI_COMMIT_BRANCH == "development"
 
-# Job de Build
-build:
-  stage: build
-  image: docker:latest
-  services:
-    - docker:dind
-  script:
-    - docker build -t taskmanager:$CI_COMMIT_SHA .
-    - docker tag taskmanager:$CI_COMMIT_SHA taskmanager:latest
-  rules:
-    - if: $CI_COMMIT_BRANCH == "master" || $CI_COMMIT_BRANCH == "staging" || $CI_COMMIT_BRANCH == "development"
-
 # job de scan de vulnerabilidades
 bandit-scan:
   stage: security
@@ -164,7 +159,7 @@ bandit-scan:
   before_script:
     - pip install bandit
   script:
-    - bandit -r app/ -ll -f html -o bandit-report.html
+    - bandit -r todo_project/ -ll -f html -o bandit-report.html
   artifacts:
     paths:
       - bandit-report.html
@@ -180,3 +175,137 @@ dependency-check-scan:
       - reports/
   rules:
     - if: $CI_COMMIT_BRANCH == "master" || $CI_COMMIT_BRANCH == "staging" || $CI_COMMIT_BRANCH == "development"
+
+# Job de Build
+build:
+  stage: build
+  image: docker:latest
+  services:
+    - docker:dind
+  script:
+    - docker build -t taskmanager:$CI_COMMIT_SHA .
+    - docker tag taskmanager:$CI_COMMIT_SHA taskmanager:latest
+    # Salva a imagem como artefato para uso nos estágios de review e staging
+    - mkdir -p $CI_PROJECT_DIR/image
+    - docker save taskmanager:$CI_COMMIT_SHA > $CI_PROJECT_DIR/image/taskmanager.tar
+  artifacts:
+    paths:
+      - image/taskmanager.tar
+    expire_in: 1 day
+  rules:
+    - if: $CI_COMMIT_BRANCH == "master" || $CI_COMMIT_BRANCH == "staging" || $CI_COMMIT_BRANCH == "development"
+    - if: $CI_MERGE_REQUEST_ID  # Executa também para merge requests
+
+# --- NOVA SEÇÃO: Entrega Contínua (CD) ---
+
+# Ambiente de Revisão para Merge Requests
+review_app:
+  stage: review
+  image: docker:latest
+  services:
+    - docker:dind
+  variables:
+    GIT_STRATEGY: none
+  dependencies:
+    - build
+  script:
+    - docker load < $CI_PROJECT_DIR/image/taskmanager.tar
+    - echo "Removendo container de review anterior se existir"
+    - docker rm -f review-app-$CI_MERGE_REQUEST_IID || true
+    - >
+      docker run -d 
+      --name review-app-$CI_MERGE_REQUEST_IID 
+      -p $REVIEW_APP_PORT:5000
+      -e FLASK_ENV=development
+      -e SECRET_KEY=review_app_secret
+      taskmanager:$CI_COMMIT_SHA
+    - echo "Ambiente de revisão disponível em http://$APP_HOST:$REVIEW_APP_PORT"
+    - echo "Aguardando inicialização do aplicativo..."
+    - sleep 10
+    - curl -s --retry 5 --retry-delay 5 http://$APP_HOST:$REVIEW_APP_PORT || (echo "Falha ao iniciar o aplicativo" && exit 1)
+  environment:
+    name: review/$CI_COMMIT_REF_NAME
+    url: http://$APP_HOST:$REVIEW_APP_PORT
+    on_stop: stop_review_app
+    auto_stop_in: 1 day
+  rules:
+    - if: $CI_MERGE_REQUEST_ID  # Executa apenas para merge requests
+
+# Job para parar ambiente de revisão
+stop_review_app:
+  stage: review
+  image: docker:latest
+  services:
+    - docker:dind
+  variables:
+    GIT_STRATEGY: none
+  script:
+    - docker rm -f review-app-$CI_MERGE_REQUEST_IID || true
+  environment:
+    name: review/$CI_COMMIT_REF_NAME
+    action: stop
+  when: manual
+  rules:
+    - if: $CI_MERGE_REQUEST_ID
+
+# Deploy em ambiente de staging
+deploy_staging:
+  stage: staging
+  image: docker:latest
+  services:
+    - docker:dind
+  variables:
+    GIT_STRATEGY: none
+  dependencies:
+    - build
+  script:
+    - docker load < $CI_PROJECT_DIR/image/taskmanager.tar
+    - echo "Removendo container de staging anterior se existir"
+    - docker rm -f staging-app || true
+    - >
+      docker run -d 
+      --name staging-app 
+      -p $STAGING_APP_PORT:5000
+      -e FLASK_ENV=staging
+      -e SECRET_KEY=staging_app_secret
+      taskmanager:$CI_COMMIT_SHA
+    - echo "Ambiente de staging disponível em http://$APP_HOST:$STAGING_APP_PORT"
+    - echo "Aguardando inicialização do aplicativo..."
+    - sleep 10
+    - curl -s --retry 5 --retry-delay 5 http://$APP_HOST:$STAGING_APP_PORT || (echo "Falha ao iniciar o aplicativo" && exit 1)
+  environment:
+    name: staging
+    url: http://$APP_HOST:$STAGING_APP_PORT
+  rules:
+    - if: $CI_COMMIT_BRANCH == "staging"
+    - if: $CI_COMMIT_BRANCH == "master"
+      when: manual  # Requer aprovação manual para deploy em staging a partir da master
+
+# Testes DAST com OWASP ZAP
+dast_security_scan:
+  stage: dast
+  image: owasp/zap2docker-stable
+  variables:
+    GIT_STRATEGY: none
+  dependencies: []
+  allow_failure: true  # Permitir falha para não bloquear o pipeline inicialmente
+  script:
+    - mkdir -p /zap/wrk/
+    - echo "Iniciando análise DAST com OWASP ZAP"
+    - >
+      zap-baseline.py -t http://$APP_HOST:$STAGING_APP_PORT
+      -g gen.conf
+      -r zap-report.html
+      --auto
+    - echo "Análise DAST concluída"
+  artifacts:
+    paths:
+      - zap-report.html
+    reports:
+      dast: zap-report.html
+    expire_in: 1 week
+  rules:
+    - if: $CI_COMMIT_BRANCH == "staging"
+    - if: $CI_COMMIT_BRANCH == "master"
+  needs:
+    - deploy_staging
