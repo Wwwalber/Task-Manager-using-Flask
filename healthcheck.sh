@@ -3,7 +3,7 @@
 
 HOST=$1
 PORT=$2
-MAX_RETRIES=10
+MAX_RETRIES=7
 SLEEP_TIME=5
 
 for i in $(seq 1 $MAX_RETRIES); do
